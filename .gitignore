@@ -1,3 +1,4 @@
 .polyscope.ini
 imgui.ini
 .DS_Store
+__pycache__/

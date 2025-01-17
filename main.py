@@ -1,12 +1,14 @@
 from tool import utils, vis
 import numpy as np
-import polyscope as ps
 import open3d as o3d
+from gaussian.particle import Particle
 
 if __name__ == "__main__":
     xyz_path = "/Users/lihongbo/Desktop/code/Gauss_recon_py/data/01_82-block.xyz"
+    site_num = 10000
+
     point_cloud = utils.read_xyz_file(xyz_path)
-    sampled_pc = utils.farthest_point_sampling(point_cloud, 10000)
-    normals = utils.estimate_normals(sampled_pc, 0.1)
-    # Visualize the point cloud
-    vis.ps_vis_vector_field(sampled_pc, normals)
+
+    particles = Particle(point_cloud)
+    particles.init_site_points(site_num)
+    particles.cal_sigma()

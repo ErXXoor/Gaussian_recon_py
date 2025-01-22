@@ -21,10 +21,13 @@ if __name__ == "__main__":
 
     particles = Particle(pc_aux, site_num)
 
-    optimizer = torch.optim.AdamW([particles.site_points], lr=1e-2)
+    # optimizer = torch.optim.AdamW([particles.site_points], lr=1e-3)
+    # pcgrad = PCGrad(optimizer)
+
+    optimizer = torch.optim.Adam([particles.optimize_site_points], lr=1e-3)
 
     scheduler = torch.optim.lr_scheduler.StepLR(
-        optimizer, step_size=100, gamma=0.5)
+        optimizer, step_size=100, gamma=0.6)
 
     loss_func = Loss_Func()
     for i in range(epoch):
@@ -32,19 +35,22 @@ if __name__ == "__main__":
 
         optimizer.zero_grad()
         loss_un = torch.stack(loss).sum()
-        # loss_un = loss[1].sum()
+        # loss_un = loss[0].sum()
         loss_un.backward()
+
+        # pcgrad.pc_backward(loss)
+        # pcgrad.step()
 
         optimizer.step()
         scheduler.step()
 
-        print(f"epoch: {i}, loss: {loss_un.item()}")
+        # print(f"epoch: {i}, loss: {loss_un.item()}")
 
-        # print(
-        #     f"epoch: {i}, loss: {loss[0].sum().item()}, {loss[1].sum().item()}")
+        print(
+            f"epoch: {i}, loss: {loss[0].sum().item()}, {loss[1].sum().item()}")
 
         # particles.constrain_sites()
-        particles.update_normals()
+        # particles.update_normals()
 
         if i % 50 == 0:
             result_points = particles.site_points.detach().cpu().numpy()

@@ -21,8 +21,11 @@ class Particle:
         self.site_points = self.site_points.cuda()
         self.site_points.requires_grad = True
 
-        self.site_normals = utils.estimate_normals(
-            self.site_points, 0.1).cuda()
+        self.update_normals()
+
+        self.optimize_site_points = torch.cat(
+            [self.site_points, self.site_normals], dim=-1)
+        self.optimize_site_points.requires_grad = True
 
     def cal_sigma(self, K=6):
         with torch.no_grad():

@@ -2,7 +2,7 @@ import torch
 from tool import utils
 from pytorch3d.ops import knn_points, knn_gather
 from .pc_aux import PC_aux
-from .func import constrained_disc_project
+from .func import constrained_disc_project, disc_project
 
 
 class Particle:
@@ -33,7 +33,34 @@ class Particle:
             self.area = 0.86/25 * torch.pow(dist_sum, 2).sum()
             self.sigma = 0.32*torch.sqrt(self.area/len(self.site_points))
 
+    def update_normals(self):
+        with torch.no_grad():
+            knn_result = knn_points(
+                self.site_points, self.pc_aux.background_pc, K=6)
+            bg_normals = knn_gather(
+                self.pc_aux.normals, knn_result.idx[..., 0:1]).squeeze(-2)
+            self.site_normals = bg_normals
+
     def constrain_sites(self, K=20):
+        with torch.no_grad():
+            bg_points_tensor = self.pc_aux.background_pc
+            knn_result = knn_points(self.site_points,
+                                    bg_points_tensor,
+                                    K=K)
+            normals = knn_gather(self.pc_aux.normals,
+                                 knn_result.idx)
+            points = knn_gather(bg_points_tensor,
+                                knn_result.idx)
+            radii = knn_gather(self.pc_aux.radii,
+                               knn_result.idx)
+            new_points = disc_project(
+                self.site_points,
+                points,
+                normals,
+                radii)
+            self.site_points += new_points - self.site_points
+
+    def constrain_sites_final(self, K=20):
         with torch.no_grad():
             bg_points_tensor = self.pc_aux.background_pc
             knn_result = knn_points(self.site_points,

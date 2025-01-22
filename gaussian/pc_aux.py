@@ -11,9 +11,28 @@ class PC_aux:
         self.radii = []
         self.init_pc_aux()
 
+    def __init__(self, bg_pc, normals):
+        self.background_pc = torch.tensor(
+            bg_pc, dtype=torch.float32).unsqueeze(0).cuda()
+        self.normals = []
+        self.radii = []
+        self.init_pc_aux(normals)
+
     def init_pc_aux(self):
         self.normals = utils.estimate_normals(
             self.background_pc, 0.1).cuda()
+
+        pc_tensor = self.background_pc
+        # L1_median_normal_filter(pc_tensor, self.normals, K=20)
+
+        knn_result = knn_points(pc_tensor, pc_tensor, K=6)
+        selected_dists = knn_result.dists[..., 5]
+        self.radii = 0.75 * selected_dists
+        self.radii = self.radii.unsqueeze(-1)
+
+    def init_pc_aux(self, normals):
+        self.normals = torch.tensor(
+            normals, dtype=torch.float32).unsqueeze(0).cuda()
 
         pc_tensor = self.background_pc
 

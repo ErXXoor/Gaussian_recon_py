@@ -4,8 +4,12 @@ import torch
 
 
 def read_xyz_file(file_path):
-    pcd = o3d.io.read_point_cloud(file_path)
-    return np.asarray(pcd.points)
+    # pcd = o3d.io.read_point_cloud(file_path)
+    # return np.asarray(pcd.points)
+    data = np.loadtxt(file_path)
+    points = data[:, :3]
+    normals = data[:, 3:]
+    return points, normals
 
 
 def farthest_point_sampling(point_tensor, num_samples):

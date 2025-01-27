@@ -5,9 +5,10 @@ from gaussian.particle import Particle
 from gaussian.pc_aux import PC_aux
 from gaussian.loss import Loss_Func
 from rvd.RVD_cpp import run_rvd
+from rvd.RVD import rvd_rec
 from gradop.pcgrad import PCGrad
 if __name__ == "__main__":
-    xyz_path = "/home/hongbo/Desktop/code/Gaussian_recon_py/data/01_82-block.xyz"
+    xyz_path = "/home/hongbo/Desktop/code/WNNC/results/think10k954132.xyz"
     site_num = 10000
     epoch = 400
     torch.cuda.set_device(2)
@@ -21,21 +22,19 @@ if __name__ == "__main__":
 
     particles = Particle(pc_aux, site_num)
 
-    # optimizer = torch.optim.AdamW([particles.site_points], lr=1e-3)
-    # pcgrad = PCGrad(optimizer)
-
     optimizer = torch.optim.Adam([particles.optimize_site_points], lr=1e-3)
+    pcgrad = PCGrad(optimizer)
 
     scheduler = torch.optim.lr_scheduler.StepLR(
-        optimizer, step_size=100, gamma=0.6)
+        optimizer, step_size=100, gamma=0.5)
 
     loss_func = Loss_Func()
     for i in range(epoch):
-        loss = loss_func.cal_loss(particles)
+        loss = loss_func.cal_loss(particles, epoch=i)
 
         optimizer.zero_grad()
         loss_un = torch.stack(loss).sum()
-        # loss_un = loss[0].sum()
+        # loss_un = loss[1].sum()
         loss_un.backward()
 
         # pcgrad.pc_backward(loss)
@@ -44,16 +43,19 @@ if __name__ == "__main__":
         optimizer.step()
         scheduler.step()
 
-        # print(f"epoch: {i}, loss: {loss_un.item()}")
+        print(f"epoch: {i}, loss: {loss_un.item()}")
 
-        print(
-            f"epoch: {i}, loss: {loss[0].sum().item()}, {loss[1].sum().item()}")
+        # print(
+        #     f"epoch: {i}, loss: {loss[0].sum().item()}, {loss[1].sum().item()}")
 
+        particles.update_site_points()
         # particles.constrain_sites()
-        # particles.update_normals()
+        # particles.constrain_sites_hd()
+        particles.update_normals()
 
         if i % 50 == 0:
-            result_points = particles.site_points.detach().cpu().numpy()
+            result_points = particles.optimize_site_points[..., :3].detach(
+            ).cpu().numpy()
 
             xyz_path = f"/home/hongbo/Desktop/code/Gaussian_recon_py/results/epoch_{i}.xyz"
             np.savetxt(xyz_path,
@@ -62,7 +64,12 @@ if __name__ == "__main__":
             output_path = f"/home/hongbo/Desktop/code/Gaussian_recon_py/results/epoch_{i}.obj"
             run_rvd(geo_path, xyz_path, output_path)
 
-    result_points = particles.site_points.detach().cpu().numpy()
+    particles.constrain_sites()
+
+    result_points = particles.optimize_site_points[..., :3].detach(
+    ).cpu().numpy()
+
+    # rvd_rec(particles.optimize_site_points[..., :3], particles.site_normals)
 
     xyz_path = "/home/hongbo/Desktop/code/Gaussian_recon_py/results/result.xyz"
     np.savetxt(xyz_path,

@@ -1,11 +1,11 @@
 import open3d as o3d
 import numpy as np
 import torch
+from sklearn.neighbors import NearestNeighbors
+from sklearn.decomposition import PCA
 
 
 def read_xyz_file(file_path):
-    # pcd = o3d.io.read_point_cloud(file_path)
-    # return np.asarray(pcd.points)
     data = np.loadtxt(file_path)
     points = data[:, :3]
     normals = data[:, 3:]
@@ -22,12 +22,40 @@ def farthest_point_sampling(point_tensor, num_samples):
     return torch.from_numpy(result_points).unsqueeze(0)
 
 
-def estimate_normals(point_tensor, radius):
-    pc = o3d.geometry.PointCloud()
+def estimate_normals(point_tensor, k=10):
     points = point_tensor.squeeze(0).detach().cpu().numpy()
-    pc.points = o3d.utility.Vector3dVector(points)
-    pc.estimate_normals(
-        search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=radius, max_nn=30))
+    dim = points.shape[1]
 
-    result_normals = np.asarray(pc.normals, dtype=np.float32)
-    return torch.from_numpy(result_normals).unsqueeze(0)
+    normals = np.zeros_like(points)
+
+    neigh = NearestNeighbors(n_neighbors=k+1, algorithm='auto').fit(points)
+    dists, indices = neigh.kneighbors(points)
+
+    for i in range(len(points)):
+        neighbor_points = points[indices[i, 1:]]
+        pca = PCA(n_components=dim)
+        pca.fit(neighbor_points)
+
+        normals[i] = pca.components_[-1]
+
+    return torch.from_numpy(normals).unsqueeze(0)
+
+
+def estimate_tangent_vectors(point_tensor, k=10):
+    points = point_tensor.squeeze(0).detach().cpu().numpy()
+    dim = points.shape[1]
+
+    eig_0 = np.zeros_like(points)
+    eig_1 = np.zeros_like(points)
+
+    neigh = NearestNeighbors(n_neighbors=k+1, algorithm='auto').fit(points)
+    dists, indices = neigh.kneighbors(points)
+
+    for i in range(len(points)):
+        neighbor_points = points[indices[i, 1:]]
+        pca = PCA(n_components=dim)
+        pca.fit(neighbor_points)
+
+        eig_0[i], eig_1[i] = pca.components_[0], pca.components_[1]
+
+    return torch.from_numpy(eig_0).unsqueeze(0), torch.from_numpy(eig_1).unsqueeze(0)

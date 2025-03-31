@@ -16,7 +16,7 @@ if __name__ == "__main__":
     output_path = "/home/hongbo/Desktop/code/Gaussian_recon_py/results/test.xyz"
 
     points, normals = read_xyz_normal_file(xyz_file)
-    points = torch.from_numpy(points).unsqueeze(0)
-    normals = torch.from_numpy(normals).unsqueeze(0)
+    points = torch.tensor(points, dtype=torch.float32).unsqueeze(0)
+    normals = torch.tensor(normals, dtype=torch.float32).unsqueeze(0)
 
     rvd_rec(points, normals)

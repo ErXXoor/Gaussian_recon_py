@@ -1,6 +1,7 @@
 import torch
 from pytorch3d.ops import knn_points, knn_gather
 from pytorch3d.io import save_obj
+from .RVD_aux import estimate_tangent_vectors
 EPS = 5e-6
 
 
@@ -76,9 +77,11 @@ def rvd_rec(input_points: torch.tensor, point_normals: torch.tensor, K=20):
     bisct_plane = torch.cat(
         (dir_vec, -torch.sum(bisct*dir_vec, dim=-1, keepdim=True)), dim=-1)
 
-    col_w_tgt = -torch.sum(input_points * point_normals, dim=-1)
-    tangent_plane = torch.cat(
-        (point_normals, col_w_tgt.unsqueeze(-1)), dim=-1).squeeze(0)
+    point_eig0, point_eig1 = estimate_tangent_vectors(input_points)
+
+    # col_w_tgt = -torch.sum(input_points * point_normals, dim=-1)
+    # tangent_plane = torch.cat(
+    #     (point_normals, col_w_tgt.unsqueeze(-1)), dim=-1).squeeze(0)
 
     couple_list = generate_couple_list(K-1)
 

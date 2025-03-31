@@ -33,7 +33,6 @@ class Loss_Func:
 
         e_p = -dist/gauss_sigma
         fgauss = torch.exp(e_p)
-        # normalization = (sigma*sigma*sigma*math.pow(2*math.pi, 1.5))**2
         normalization = torch.pow(gauss_sigma*torch.tensor(math.pi), dim/2)
         fgauss = fgauss / normalization
         fgauss = fgauss.sum(dim=-1)
@@ -42,28 +41,6 @@ class Loss_Func:
 
     def qem_energy(self, site_points, ngbr_points, ngbr_normals, ngbr_radius, sigma):
         u_tensor = ngbr_points-site_points.unsqueeze(-2).expand_as(ngbr_points)
-
-        # with torch.no_grad():
-        #     nm_tensor = torch.einsum(
-        #         '...i,...j->...ij', u_tensor, u_tensor)
-        #     nm_tensor = nm_tensor.sum(dim=-3)
-        #     eigen_values, _ = torch.linalg.eigh(nm_tensor)
-        #     lambda_coeff = eigen_values.sum(dim=-1)
-        #     lambda_coeff = eigen_values[..., 0]/lambda_coeff
-
-        #     u_tensor_norm = torch.norm(u_tensor, dim=-1)
-        #     lambda_coeff = lambda_coeff.unsqueeze(-1).expand_as(u_tensor_norm)
-
-        #     radius_mask = u_tensor_norm < lambda_coeff*sigma
-
-        # u_tensor = u_tensor[radius_mask]
-        # ngbr_normals = ngbr_normals[radius_mask]
-        # u_tensor = torch.einsum('ab,ab->a', u_tensor, ngbr_normals)
-
-        # u_tensor_normal = torch.einsum(
-        #     'abcd,abcd->abc', u_tensor, ngbr_normals)
-        # tmp_term = torch.einsum('abcd,abcd->abc', u_tensor, u_tensor)
-        # dist = u_tensor_normal**2
 
         dim = u_tensor.shape[-1]
         u_tensor_normal = torch.zeros(dim, dim).expand(
@@ -81,22 +58,12 @@ class Loss_Func:
 
         dist = u_tensor_normal
 
-        # with torch.no_grad():
-        #     epsilon_tensor = 1e-5*torch.norm(u_tensor, dim=-1)
-        #     EPS_tensor = EPS*torch.ones_like(epsilon_tensor)
-
-        # dist = torch.where(torch.abs(u_tensor_normal) <
-        #                    EPS_tensor, epsilon_tensor, u_tensor_normal)
-
-        # nm_sigma = 4*ngbr_radius.squeeze(-1)
         nm_sigma = sigma*sigma
         nm_ep = -dist/(nm_sigma)
         normalization = torch.pow(nm_sigma*torch.tensor(math.pi), 1.5)
-        # normalization = (sigma*sigma*sigma*math.pow(2*math.pi, 1.5))**2
 
         f_nm = torch.exp(nm_ep)
         f_nm = f_nm / normalization
-        # f_nm = f_nm*ngbr_radius.squeeze(-1)
         f_nm = f_nm.sum(dim=-1)
 
         return f_nm
@@ -165,17 +132,21 @@ class Loss_Func:
         gauss_loss = self.gauss_energy(
             particles.optimize_site_points, ngbr_normals_site, ngbr_points_site, radius)
 
-        # qem_loss = self.qem_energy(
-        #     particles.optimize_site_points, ngbr_points_bg, ngbr_normals_bg, ngbr_radius_bg, particles.sigma)
+        qem_loss = self.qem_energy(
+            particles.optimize_site_points, ngbr_points_bg, ngbr_normals_bg, ngbr_radius_bg, radius)
 
-        qem_loss = self.qem_energy_vor(
-            particles.site_points, particles.pc_aux.background_pc, particles.pc_aux.normals, knn_result_bg_vor.idx[..., 0], particles.pc_aux.radii, particles.sigma)
+        # qem_loss = self.qem_energy_vor(
+        #     particles.site_points, particles.pc_aux.background_pc, particles.pc_aux.normals, knn_result_bg_vor.idx[..., 0], particles.pc_aux.radii, radius)
 
         # loss = [gauss_loss.sum()]
 
         decay = 1
-        if epoch % 10 == 0 and epoch != 0:
-            decay *= 0.5
+        # if epoch % 10 == 0 and epoch != 0:
+        #     decay *= 1.1
 
-        loss = [-1e6*qem_loss.sum(), decay*gauss_loss.sum()]
+        decay_qem = 1e3
+        # if epoch % 50 == 0 and epoch != 0:
+        #     decay *= 0.8
+
+        loss = [-decay_qem*qem_loss.sum(), decay*gauss_loss.sum()]
         return loss

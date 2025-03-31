@@ -24,10 +24,10 @@ class PC_aux:
 
         self.optimize_base_pc = self.background_pc
 
-        self.hd_eig0, self.hd_eig1 = utils.estimate_tangent_vectors(
-            self.optimize_base_pc)
-        self.hd_eig0 = self.hd_eig0.cuda()
-        self.hd_eig1 = self.hd_eig1.cuda()
+        # self.hd_eig0, self.hd_eig1 = utils.estimate_tangent_vectors(
+        #     self.optimize_base_pc)
+        # self.hd_eig0 = self.hd_eig0.cuda()
+        # self.hd_eig1 = self.hd_eig1.cuda()
         self.init_radii()
 
     def init_radii(self):

@@ -11,11 +11,13 @@ import os
 
 
 def gaussian_recon(mesh_path, site_num, out_path, verbose=False):
-    epoch = 300
+    epoch = 200
     torch.cuda.set_device(0)
     torch.manual_seed(42)
 
-    geo_path = "/home/hongbo/Desktop/code/Gaussian_recon/cmake-build-debug/bin/surface_reconstruction"
+    # geo_path = "/home/hongbo/Desktop/code/Gaussian_recon/cmake-build-debug/bin/surface_reconstruction"
+
+    geo_path = "/home/hongbo/Desktop/code/geogram/cmake-build-release/bin/co3netest"
 
     point_cloud, normals = utils.read_xyz_file(mesh_path)
 
@@ -24,7 +26,6 @@ def gaussian_recon(mesh_path, site_num, out_path, verbose=False):
     particles = Particle(pc_aux, site_num)
 
     optimizer = torch.optim.Adam([particles.optimize_site_points], lr=1e-3)
-    # pcgrad = PCGrad(optimizer)
 
     scheduler = torch.optim.lr_scheduler.StepLR(
         optimizer, step_size=100, gamma=0.6)
@@ -39,16 +40,13 @@ def gaussian_recon(mesh_path, site_num, out_path, verbose=False):
         # loss_un = loss[0].sum()
         loss_un.backward()
 
-        # pcgrad.pc_backward(loss)
-        # pcgrad.step()
-
         optimizer.step()
         scheduler.step()
 
-        # print(f"epoch: {i}, loss: {loss_un.item()}")
+        print(f"epoch: {i}, loss: {loss_un.item()}")
 
-        print(
-            f"epoch: {i}, loss: {loss[0].sum().item()}, {loss[1].sum().item()}")
+        # print(
+        #     f"epoch: {i}, loss: {loss[0].sum().item()}, {loss[1].sum().item()}")
 
         particles.update_site_points()
         # particles.constrain_sites()
@@ -66,12 +64,10 @@ def gaussian_recon(mesh_path, site_num, out_path, verbose=False):
             output_path = f"{out_path}/epoch_{i}.obj"
             run_rvd(geo_path, xyz_path, output_path)
 
-    # particles.constrain_sites()
+    particles.constrain_sites()
 
     result_points = particles.optimize_site_points[..., :3].detach(
     ).cpu().numpy()
-
-    # rvd_rec(particles.optimize_site_points[..., :3], particles.site_normals)
 
     xyz_path = "/home/hongbo/Desktop/code/Gaussian_recon_py/results/result.xyz"
     np.savetxt(xyz_path,
@@ -82,7 +78,7 @@ def gaussian_recon(mesh_path, site_num, out_path, verbose=False):
 
 
 if __name__ == "__main__":
-    input_path = "/home/hongbo/Desktop/code/Gaussian_recon_py/data/think10k107910.xyz"
+    input_path = "/home/hongbo/Desktop/code/Gaussian_recon_py/data/guitar.xyz"
     out_path = "/home/hongbo/Desktop/code/Gaussian_recon_py/results/"
-    site_num = 20000
+    site_num = 10000
     gaussian_recon(input_path, site_num, out_path, True)

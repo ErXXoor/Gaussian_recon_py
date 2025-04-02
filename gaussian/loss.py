@@ -24,12 +24,12 @@ class Loss_Func:
         u_tensor = u_tensor - \
             u_tensor_dot.unsqueeze(-1)*ngbr_normals
 
-        # dist = torch.matmul(u_tensor.unsqueeze(-2),
-        #                     u_tensor.unsqueeze(-1))
+        dist = torch.matmul(u_tensor.unsqueeze(-2),
+                            u_tensor.unsqueeze(-1))
 
-        dist = torch.norm(u_tensor, dim=-1)
+        # dist = torch.norm(u_tensor, dim=-1)
 
-        gauss_sigma = 4*sigma*sigma
+        gauss_sigma = sigma*sigma
 
         e_p = -dist/gauss_sigma
         fgauss = torch.exp(e_p)
@@ -89,7 +89,7 @@ class Loss_Func:
 
         dist = u_tensor_normal
 
-        nm_sigma = sigma*sigma
+        nm_sigma = 8*sigma*sigma
         nm_ep = -dist/(nm_sigma)
         normalization = torch.pow(nm_sigma*torch.tensor(math.pi), 1.5)
 
@@ -130,23 +130,24 @@ class Loss_Func:
             particles.pc_aux.background_pc, particles.site_points, K=bg_K)
 
         gauss_loss = self.gauss_energy(
-            particles.optimize_site_points, ngbr_normals_site, ngbr_points_site, radius)
+            particles.optimize_site_points, ngbr_normals_site, ngbr_points_site, particles.sigma)
 
-        qem_loss = self.qem_energy(
-            particles.optimize_site_points, ngbr_points_bg, ngbr_normals_bg, ngbr_radius_bg, radius)
+        # qem_loss = self.qem_energy(
+        #     particles.optimize_site_points, ngbr_points_bg, ngbr_normals_bg, ngbr_radius_bg, particles.sigma)
 
-        # qem_loss = self.qem_energy_vor(
-        #     particles.site_points, particles.pc_aux.background_pc, particles.pc_aux.normals, knn_result_bg_vor.idx[..., 0], particles.pc_aux.radii, radius)
+        qem_loss = self.qem_energy_vor(
+            particles.site_points, particles.pc_aux.background_pc, particles.pc_aux.normals, knn_result_bg_vor.idx[..., 0], particles.pc_aux.radii, radius)
 
         # loss = [gauss_loss.sum()]
 
-        decay = 1
-        # if epoch % 10 == 0 and epoch != 0:
-        #     decay *= 1.1
+        decay = 1e-6
+        # if epoch % 50 == 0 and epoch != 0:
+        #     decay *= 0.8
 
-        decay_qem = 1e3
+        decay_qem = 5e10
         # if epoch % 50 == 0 and epoch != 0:
         #     decay *= 0.8
 
         loss = [-decay_qem*qem_loss.sum(), decay*gauss_loss.sum()]
+        # loss = [gauss_loss.sum()]
         return loss

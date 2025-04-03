@@ -21,15 +21,15 @@ class Loss_Func:
         u_tensor_dot = torch.einsum(
             'abcd,abcd->abc', u_tensor, ngbr_normals)
 
-        u_tensor = u_tensor - \
-            u_tensor_dot.unsqueeze(-1)*ngbr_normals
+        # u_tensor = u_tensor - \
+        #     u_tensor_dot.unsqueeze(-1)*ngbr_normals
 
         dist = torch.matmul(u_tensor.unsqueeze(-2),
                             u_tensor.unsqueeze(-1))
 
         # dist = torch.norm(u_tensor, dim=-1)
 
-        gauss_sigma = sigma*sigma
+        gauss_sigma = 2*sigma*sigma
 
         e_p = -dist/gauss_sigma
         fgauss = torch.exp(e_p)
@@ -58,11 +58,14 @@ class Loss_Func:
 
         dist = u_tensor_normal
 
-        nm_sigma = sigma*sigma
+        nm_sigma = 4*sigma*sigma
         nm_ep = -dist/(nm_sigma)
         normalization = torch.pow(nm_sigma*torch.tensor(math.pi), 1.5)
 
         f_nm = torch.exp(nm_ep)
+
+        ngbr_radius = ngbr_radius.squeeze(-1)
+
         f_nm = f_nm / normalization
         f_nm = f_nm.sum(dim=-1)
 
@@ -94,19 +97,19 @@ class Loss_Func:
         normalization = torch.pow(nm_sigma*torch.tensor(math.pi), 1.5)
 
         f_nm = torch.exp(nm_ep)
-        f_nm = f_nm*bg_radius / normalization
+        f_nm = f_nm / normalization
         f_nm = f_nm.sum(dim=-1)
 
         return f_nm
 
-    def cal_loss(self, particles: Particle, epoch, site_K=10, bg_K=15):
+    def cal_loss(self, particles: Particle, epoch, site_K=12, bg_K=30):
         radius = 3*torch.sqrt(torch.tensor(2.0))*particles.sigma
 
         knn_result_site = knn_points(
             particles.optimize_site_points, particles.optimize_site_points, K=site_K)
         ngbr_points_site = knn_gather(
             particles.optimize_site_points, knn_result_site.idx[:, :, 1:])
-        ngbr_points_site = ngbr_points_site.detach()
+        # ngbr_points_site = ngbr_points_site.detach()
 
         ngbr_normals_site = knn_gather(
             particles.site_normals, knn_result_site.idx[:, :, 1:])
@@ -138,13 +141,11 @@ class Loss_Func:
         qem_loss = self.qem_energy_vor(
             particles.site_points, particles.pc_aux.background_pc, particles.pc_aux.normals, knn_result_bg_vor.idx[..., 0], particles.pc_aux.radii, radius)
 
-        # loss = [gauss_loss.sum()]
-
-        decay = 1e-6
+        decay = 1
         # if epoch % 50 == 0 and epoch != 0:
         #     decay *= 0.8
 
-        decay_qem = 5e10
+        decay_qem = 5e3
         # if epoch % 50 == 0 and epoch != 0:
         #     decay *= 0.8
 

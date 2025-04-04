@@ -22,21 +22,25 @@ class Particle:
 
         self.update_normals()
 
-        # self.optimize_site_points = torch.cat(
-        #     [self.site_points, 0.3*self.site_normals], dim=-1)
+        self.optimize_site_points = torch.cat(
+            [self.site_points, 0.1*self.site_normals], dim=-1)
 
-        self.optimize_site_points = self.site_points
+        # self.optimize_site_points = self.site_points
 
         self.optimize_site_points.requires_grad = True
 
     def cal_sigma(self, K=6):
+        area = self.pc_aux.get_total_area()
         with torch.no_grad():
-            knn_result = knn_points(
-                self.optimize_site_points, self.optimize_site_points, K=K)
-            dists = knn_result.dists[..., 1:]
-            dist_sum = dists.sum(dim=-1)
+            # knn_result = knn_points(
+            #     self.optimize_site_points, self.optimize_site_points, K=K)
+            # dists = knn_result.dists[..., 1:]
+            # dist_sum = dists.sum(dim=-1)
 
-            self.area = 0.86/25 * torch.pow(dist_sum, 2).sum()
+            # self.area = 0.86/25 * torch.pow(dist_sum, 2).sum()
+
+            self.area = 0.86/25 * area
+
             self.sigma = 0.32 * \
                 torch.sqrt(self.area/len(self.optimize_site_points))
 
@@ -71,12 +75,18 @@ class Particle:
                 radii)
             self.optimize_site_points += new_points - self.optimize_site_points
 
-    def constrain_sites_hd(self, K=20):
+    def constrain_sites_hd(self, K=7):
         with torch.no_grad():
             bg_points_tensor = self.pc_aux.optimize_base_pc
+
             knn_result = knn_points(self.optimize_site_points,
                                     bg_points_tensor,
                                     K=K)
+
+            # knn_result = knn_points(self.optimize_site_points[..., :3],
+            #                         bg_points_tensor[..., :3],
+            #                         K=K)
+
             bg_eig0 = knn_gather(self.pc_aux.hd_eig0,
                                  knn_result.idx)
             bg_eig1 = knn_gather(self.pc_aux.hd_eig1,

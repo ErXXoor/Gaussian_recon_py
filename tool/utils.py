@@ -41,7 +41,9 @@ def estimate_normals(point_tensor, k=10):
     return torch.from_numpy(normals).unsqueeze(0)
 
 
-def estimate_tangent_vectors(point_tensor, k=10):
+def estimate_tangent_vectors(point_tensor, k=30):
+    print("Estimating tangent vectors...")
+    ##############
     points = point_tensor.squeeze(0).detach().cpu().numpy()
     dim = points.shape[1]
 
@@ -58,4 +60,5 @@ def estimate_tangent_vectors(point_tensor, k=10):
 
         eig_0[i], eig_1[i] = pca.components_[0], pca.components_[1]
 
+    print("Tangent vectors estimated.")
     return torch.from_numpy(eig_0).unsqueeze(0), torch.from_numpy(eig_1).unsqueeze(0)

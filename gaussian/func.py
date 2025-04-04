@@ -1,5 +1,17 @@
 import torch
-from pytorch3d.ops import knn_points, knn_gather
+from sklearn.neighbors import NearestNeighbors
+import numpy as np
+
+
+def gather_neighbor(points, k=12):
+    neigh = NearestNeighbors(
+        n_neighbors=k+1, radius=0.4, algorithm='ball_tree')
+    neigh.fit(points)
+    dists, indices = neigh.kneighbors(points, return_distance=True)
+
+    dists_tensor = torch.from_numpy(dists[:, 1:].astype(np.float32))
+    indices_tensor = torch.from_numpy(indices[:, 1:].astype(np.int32))
+    return dists_tensor, indices_tensor
 
 
 def disc_project(site_points,
@@ -36,13 +48,10 @@ def disc_project_hd(site_points,
 
     proj_site_points = bg_points + proj_v
 
-    # dist = torch.norm(site_points_expand-proj_site_points,
-    #                   dim=-1).unsqueeze(-1)
+    avg_points = proj_site_points[:, :, 0:3, :].sum(dim=-2).unsqueeze(-2)
+    avg_points = avg_points / 3
+    ct_site_points = avg_points
 
-    # min_dist, min_idx = torch.min(dist, dim=-2, keepdim=True)
-
-    # ct_site_points = torch.gather(
-    #     proj_site_points, -2, min_idx.expand(-1, -1, -1, proj_site_points.shape[-1]))
-    ct_site_points = proj_site_points[:, :, 0, :].unsqueeze(-2)
+    # ct_site_points = proj_site_points[:, :, 0, :].unsqueeze(-2)
 
     return ct_site_points.squeeze(-2)

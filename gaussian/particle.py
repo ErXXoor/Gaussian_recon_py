@@ -2,7 +2,7 @@ import torch
 from tool import utils
 from pytorch3d.ops import knn_points, knn_gather
 from .pc_aux import PC_aux
-from .func import disc_project, disc_project_hd
+from .func import disc_project, disc_project_hd, disc_project_hd_norm
 
 
 class Particle:
@@ -40,6 +40,7 @@ class Particle:
             # self.area = 0.86/25 * torch.pow(dist_sum, 2).sum()
 
             self.area = 0.86/25 * area
+            # self.area = area
 
             self.sigma = 0.32 * \
                 torch.sqrt(self.area/len(self.optimize_site_points))
@@ -79,13 +80,13 @@ class Particle:
         with torch.no_grad():
             bg_points_tensor = self.pc_aux.optimize_base_pc
 
-            knn_result = knn_points(self.optimize_site_points,
-                                    bg_points_tensor,
-                                    K=K)
-
-            # knn_result = knn_points(self.optimize_site_points[..., :3],
-            #                         bg_points_tensor[..., :3],
+            # knn_result = knn_points(self.optimize_site_points,
+            #                         bg_points_tensor,
             #                         K=K)
+
+            knn_result = knn_points(self.optimize_site_points[..., :3],
+                                    bg_points_tensor[..., :3],
+                                    K=K)
 
             bg_eig0 = knn_gather(self.pc_aux.hd_eig0,
                                  knn_result.idx)
@@ -95,10 +96,18 @@ class Particle:
                                    knn_result.idx)
             radii = knn_gather(self.pc_aux.radii,
                                knn_result.idx)
+            # new_points = disc_project_hd(
+            #     self.optimize_site_points,
+            #     bg_points,
+            #     bg_eig0,
+            #     bg_eig1,
+            #     radii)
+
             new_points = disc_project_hd(
-                self.optimize_site_points,
-                bg_points,
+                self.optimize_site_points[..., :3],
+                bg_points[..., :3],
                 bg_eig0,
                 bg_eig1,
                 radii)
+
             self.optimize_site_points += new_points - self.optimize_site_points

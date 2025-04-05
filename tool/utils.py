@@ -50,8 +50,9 @@ def estimate_tangent_vectors(point_tensor, k=30):
     eig_0 = np.zeros_like(points)
     eig_1 = np.zeros_like(points)
 
-    neigh = NearestNeighbors(n_neighbors=k+1, algorithm='auto').fit(points)
-    dists, indices = neigh.kneighbors(points)
+    neigh = NearestNeighbors(
+        n_neighbors=k+1, algorithm='auto').fit(points[..., :3])
+    dists, indices = neigh.kneighbors(points[..., :3])
 
     for i in range(len(points)):
         neighbor_points = points[indices[i, 1:]]

@@ -11,7 +11,7 @@ import os
 
 
 def gaussian_recon(mesh_path, site_num, out_path, verbose=False):
-    epoch = 300
+    epoch = 200
     torch.cuda.set_device(0)
     torch.manual_seed(42)
 
@@ -49,12 +49,13 @@ def gaussian_recon(mesh_path, site_num, out_path, verbose=False):
         #     f"epoch: {i}, loss: {loss[0].sum().item()}, {loss[1].sum().item()}")
 
         # particles.constrain_sites()
-        particles.constrain_sites_hd()
         particles.update_site_points()
+        particles.constrain_sites_hd()
+
         particles.update_normals()
 
         if verbose and i % 50 == 0:
-            result_points = particles.optimize_site_points[..., :3].detach(
+            result_points = particles.optimize_site_points.detach(
             ).cpu().numpy()
 
             xyz_path = f"{out_path}/epoch_{i}.xyz"
@@ -66,7 +67,7 @@ def gaussian_recon(mesh_path, site_num, out_path, verbose=False):
             run_rvd_hd(geo_path, xyz_path, output_path)
 
     # particles.constrain_sites()
-    particles.constrain_sites_hd()
+    # particles.constrain_sites_hd()
 
     result_points = particles.optimize_site_points.detach(
     ).cpu().numpy()

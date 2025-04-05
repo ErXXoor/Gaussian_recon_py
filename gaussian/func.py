@@ -48,8 +48,8 @@ def disc_project_hd(site_points,
 
     proj_site_points = bg_points + proj_v
 
-    avg_points = proj_site_points[:, :, 0:3, :].sum(dim=-2).unsqueeze(-2)
-    avg_points = avg_points / 3
+    avg_points = proj_site_points[:, :, 0:5, :].sum(dim=-2).unsqueeze(-2)
+    avg_points = avg_points / 5
     ct_site_points = avg_points
 
     # ct_site_points = proj_site_points[:, :, 0, :].unsqueeze(-2)

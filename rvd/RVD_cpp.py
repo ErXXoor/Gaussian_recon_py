@@ -22,16 +22,17 @@ def run_rvd(geo_path, input_path, output_path):
         print("An error occurred:", str(e))
 
 
-def run_rvd_hd(geo_path, input_path, output_path):
+def run_rvd_hd(geo_path, dim, input_path, output_path):
     params = [
         "",
         "",
-        "6",
+        "",
         "10000",
     ]
 
     params[0] = input_path
     params[1] = output_path
+    params[2] = str(dim)
 
     command = [geo_path] + params
     print(command)

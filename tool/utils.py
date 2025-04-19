@@ -12,6 +12,14 @@ def read_xyz_file(file_path):
     return points, normals
 
 
+def read_xyz_file_8d(file_path):
+    data = np.loadtxt(file_path)
+    points = data[:, :3]
+    normals = data[:, 3:6]
+    tangents = data[:, 6:8]
+    return points, normals, tangents
+
+
 def farthest_point_sampling(point_tensor, num_samples):
     pc = o3d.geometry.PointCloud()
     points = point_tensor.squeeze(0).cpu().numpy()

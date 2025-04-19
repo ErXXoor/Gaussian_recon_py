@@ -6,13 +6,15 @@ from .func import disc_project, disc_project_hd, disc_project_hd_norm
 
 
 class Particle:
-    def __init__(self, pc_aux: PC_aux, site_num=10000):
+    def __init__(self, pc_aux: PC_aux, site_num=10000, dim=3):
         self.pc_aux = pc_aux
         self.area = 0.0
         self.sigma = 0.0
+        self.dim = dim
 
         self.init_site_points(site_num)
-        self.cal_sigma()
+        # self.cal_sigma()
+        self.update_sigma()
 
     def init_site_points(self, num_samples):
         self.site_points = utils.farthest_point_sampling(
@@ -22,10 +24,12 @@ class Particle:
 
         self.update_normals()
 
-        self.optimize_site_points = torch.cat(
-            [self.site_points, 0.1*self.site_normals], dim=-1)
+        if self.dim == 3:
+            self.optimize_site_points = self.site_points
 
-        # self.optimize_site_points = self.site_points
+        elif self.dim == 6:
+            self.optimize_site_points = torch.cat(
+                [self.site_points, 0.1*self.site_normals], dim=-1)
 
         self.optimize_site_points.requires_grad = True
 
@@ -38,12 +42,29 @@ class Particle:
             # dist_sum = dists.sum(dim=-1)
 
             # self.area = 0.86/25 * torch.pow(dist_sum, 2).sum()
+            alpha = 0.32
 
             self.area = 0.86/25 * area
-            # self.area = area
+            # alpha = 1
 
-            self.sigma = 0.32 * \
+            self.sigma = alpha * \
                 torch.sqrt(self.area/len(self.optimize_site_points))
+
+    def update_sigma(self, K=7):
+        with torch.no_grad():
+            knn_result = knn_points(
+                self.optimize_site_points, self.optimize_site_points, K=K)
+            dists = knn_result.dists[..., 1:]
+            dist_sum = dists.mean(dim=-1)
+
+            aaa = torch.pow(dist_sum, 2).sum()
+
+            self.area = 0.86/25 * torch.pow(dist_sum, 2).sum()
+
+            self.sigma = 1 * \
+                torch.sqrt(self.area/len(self.optimize_site_points))
+
+            bbb = 0
 
     def update_normals(self):
         with torch.no_grad():
@@ -96,18 +117,23 @@ class Particle:
                                    knn_result.idx)
             radii = knn_gather(self.pc_aux.radii,
                                knn_result.idx)
-            # new_points = disc_project_hd(
-            #     self.optimize_site_points,
-            #     bg_points,
-            #     bg_eig0,
-            #     bg_eig1,
-            #     radii)
-
             new_points = disc_project_hd(
-                self.optimize_site_points[..., :3],
-                bg_points[..., :3],
+                self.optimize_site_points,
+                bg_points,
                 bg_eig0,
                 bg_eig1,
                 radii)
+
+            # # metric projection
+            # bg_normals = knn_gather(
+            #     self.pc_aux.normals, knn_result.idx).squeeze(-2)
+
+            # new_points = disc_project_hd_norm(
+            #     self.optimize_site_points,
+            #     bg_points,
+            #     bg_normals,
+            #     bg_eig0,
+            #     bg_eig1,
+            #     radii)
 
             self.optimize_site_points += new_points - self.optimize_site_points

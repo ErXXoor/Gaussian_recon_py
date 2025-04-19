@@ -18,11 +18,11 @@ class Loss_Func:
 
         u_tensor = ngbr_points - site_points_expand
 
-        # u_tensor_dot = torch.einsum(
-        #     'abcd,abcd->abc', u_tensor, ngbr_normals)
+        u_tensor_dot = torch.einsum(
+            'abcd,abcd->abc', u_tensor, ngbr_normals)
 
-        # u_tensor = u_tensor - \
-        #     u_tensor_dot.unsqueeze(-1)*ngbr_normals
+        u_tensor = u_tensor - \
+            u_tensor_dot.unsqueeze(-1)*ngbr_normals
 
         dist = torch.matmul(u_tensor.unsqueeze(-2),
                             u_tensor.unsqueeze(-1))
@@ -66,7 +66,7 @@ class Loss_Func:
 
         ngbr_radius = ngbr_radius.squeeze(-1)
 
-        f_nm = f_nm / normalization
+        # f_nm = f_nm / normalization
         f_nm = f_nm.sum(dim=-1)
 
         return f_nm
@@ -77,14 +77,14 @@ class Loss_Func:
         u_tensor = bg_points-bg_site
 
         dim = u_tensor.shape[-1]
-        u_tensor_normal = torch.eye(dim).expand(
+        u_tensor_normal = torch.zeros(dim, dim).expand(
             u_tensor.shape[0], u_tensor.shape[1], dim, dim)
 
         u_tensor_normal = u_tensor_normal.to(u_tensor.device)
 
         nm_tensor = torch.einsum(
             '...i,...j->...ij', bg_normals, bg_normals)
-        nm_tensor = weight * nm_tensor
+        # nm_tensor = weight * nm_tensor
         u_tensor_normal[..., :3, :3] += nm_tensor
 
         u_tensor_normal = torch.einsum(
@@ -94,7 +94,9 @@ class Loss_Func:
 
         dist = u_tensor_normal
 
+        # sigma = sigma*10
         nm_sigma = 4*sigma*sigma
+
         nm_ep = -dist/(nm_sigma)
         normalization = torch.pow(nm_sigma*torch.tensor(math.pi), 1.5)
 
@@ -104,11 +106,11 @@ class Loss_Func:
 
         return f_nm
 
-    def cal_loss(self, particles: Particle, epoch, site_K=12, bg_K=30):
+    def cal_loss(self, particles: Particle, epoch, site_K=12, bg_K=20):
         radius = 3*torch.sqrt(torch.tensor(2.0))*particles.sigma
 
         knn_result_site = knn_points(
-            particles.optimize_site_points[..., :3], particles.optimize_site_points[..., :3], K=site_K)
+            particles.optimize_site_points, particles.optimize_site_points, K=site_K)
         ngbr_points_site = knn_gather(
             particles.optimize_site_points, knn_result_site.idx[:, :, 1:])
         # ngbr_points_site = ngbr_points_site.detach()
@@ -132,20 +134,21 @@ class Loss_Func:
         # ngbr_radius_bg = ngbr_radius_bg.detach()
 
         knn_result_bg_vor = knn_points(
-            particles.pc_aux.optimize_base_pc,
-            particles.optimize_site_points, K=bg_K)
+            particles.pc_aux.optimize_base_pc[..., :3],
+            particles.optimize_site_points[..., :3], K=bg_K)
 
         gauss_loss = self.gauss_energy(
-            particles.optimize_site_points, ngbr_normals_site, ngbr_points_site, particles.sigma)
+            particles.optimize_site_points, ngbr_normals_site, ngbr_points_site,
+            particles.sigma)
 
-        # qem_loss = self.qem_energy(
-        #     particles.optimize_site_points, ngbr_points_bg, ngbr_normals_bg, ngbr_radius_bg, particles.sigma)
+        qem_loss = self.qem_energy(
+            particles.optimize_site_points, ngbr_points_bg, ngbr_normals_bg, ngbr_radius_bg, particles.sigma)
 
-        decay_qem = 3
-        qem_loss = self.qem_energy_vor(
-            particles.optimize_site_points,
-            particles.pc_aux.optimize_base_pc,
-            particles.pc_aux.normals, knn_result_bg_vor.idx[..., 0], particles.pc_aux.radii, radius, weight=decay_qem)
+        decay_qem = 6
+        # qem_loss = self.qem_energy_vor(
+        #     particles.optimize_site_points,
+        #     particles.pc_aux.optimize_base_pc,
+        #     particles.pc_aux.normals, knn_result_bg_vor.idx[..., 0], particles.pc_aux.radii, particles.sigma, weight=decay_qem)
 
         decay = 1
         # if epoch % 50 == 0 and epoch != 0:
@@ -154,6 +157,19 @@ class Loss_Func:
         # if epoch % 50 == 0 and epoch != 0:
         #     decay *= 0.8
 
-        # loss = [-qem_loss.sum(), decay*gauss_loss.sum()]
-        loss = [gauss_loss.sum()]
+        # loss = [-qem_loss.sum()]
+
+        loss = []
+        if particles.dim == 3:
+            qem_coeff = 1e-1
+            gauss_coeff = 1
+            # loss = [-qem_coeff*qem_loss.sum(), gauss_coeff*gauss_loss.sum()]
+            loss = [gauss_coeff*gauss_loss.sum()]
+
+        elif particles.dim == 6:
+            qem_coeff = 1e3
+            gauss_coeff = 1e2
+            # loss = [-qem_coeff*qem_loss.sum(), gauss_coeff*gauss_loss.sum()]
+            loss = [gauss_loss.sum()]
+
         return loss

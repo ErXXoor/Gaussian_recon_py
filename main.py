@@ -10,20 +10,21 @@ from gradop.pcgrad import PCGrad
 import os
 
 
-def gaussian_recon(mesh_path, site_num, out_path, verbose=False):
+def gaussian_recon(mesh_path, site_num, dim, out_path, verbose=False):
     epoch = 200
     torch.cuda.set_device(0)
     torch.manual_seed(42)
 
     # geo_path = "/home/hongbo/Desktop/code/Gaussian_recon/cmake-build-debug/bin/surface_reconstruction"
 
-    geo_path = "/home/hongbo/Desktop/code/geogram/cmake-build-release/bin/co3netest"
+    geo_path = "/home/hongbo/Desktop/code/SimplexCVT_recon/cmake-build-release/src/src"
+    # geo_path = "/home/hongbo/Desktop/code/geogram/cmake-build-release/bin/co3netest"
 
     point_cloud, normals = utils.read_xyz_file(mesh_path)
 
-    pc_aux = PC_aux(point_cloud, normals)
+    pc_aux = PC_aux(point_cloud, normals, dim)
 
-    particles = Particle(pc_aux, site_num)
+    particles = Particle(pc_aux, site_num, dim)
 
     optimizer = torch.optim.AdamW([particles.optimize_site_points], lr=1e-3)
 
@@ -32,6 +33,8 @@ def gaussian_recon(mesh_path, site_num, out_path, verbose=False):
 
     loss_func = Loss_Func()
     for i in range(epoch):
+
+        # particles.update_sigma()
 
         loss = loss_func.cal_loss(particles, epoch=i)
 
@@ -48,9 +51,15 @@ def gaussian_recon(mesh_path, site_num, out_path, verbose=False):
         # print(
         #     f"epoch: {i}, loss: {loss[0].sum().item()}, {loss[1].sum().item()}")
 
-        # particles.constrain_sites()
         particles.update_site_points()
-        particles.constrain_sites_hd()
+        particles.update_normals()
+
+        if dim == 3:
+            particles.constrain_sites()
+            # pass
+
+        else:
+            particles.constrain_sites_hd()
 
         particles.update_normals()
 
@@ -64,9 +73,9 @@ def gaussian_recon(mesh_path, site_num, out_path, verbose=False):
 
             output_path = f"{out_path}/epoch_{i}.obj"
             # run_rvd(geo_path, xyz_path, output_path)
-            run_rvd_hd(geo_path, xyz_path, output_path)
+            run_rvd_hd(geo_path, dim, xyz_path, output_path)
 
-    # particles.constrain_sites()
+    particles.constrain_sites()
     # particles.constrain_sites_hd()
 
     result_points = particles.optimize_site_points.detach(
@@ -78,11 +87,12 @@ def gaussian_recon(mesh_path, site_num, out_path, verbose=False):
 
     output_path = "/home/hongbo/Desktop/code/Gaussian_recon_py/results/result.obj"
     # run_rvd(geo_path, xyz_path, output_path)
-    run_rvd_hd(geo_path, xyz_path, output_path)
+    run_rvd_hd(geo_path, dim, xyz_path, output_path)
 
 
 if __name__ == "__main__":
-    input_path = "/home/hongbo/Desktop/code/Gaussian_recon_py/data/think10k107910.xyz"
+    input_path = "/home/hongbo/Desktop/code/WNNC/results/ec70f9d4.xyz"
     out_path = "/home/hongbo/Desktop/code/Gaussian_recon_py/results/"
-    site_num = 10000
-    gaussian_recon(input_path, site_num, out_path, True)
+    site_num = 40000
+    dim = 3
+    gaussian_recon(input_path, site_num, dim, out_path, True)

@@ -15,10 +15,7 @@ def gaussian_recon(mesh_path, site_num, dim, out_path, verbose=False):
     torch.cuda.set_device(0)
     torch.manual_seed(42)
 
-    # geo_path = "/home/hongbo/Desktop/code/Gaussian_recon/cmake-build-debug/bin/surface_reconstruction"
-
-    geo_path = "/home/hongbo/Desktop/code/SimplexCVT_recon/cmake-build-release/src/src"
-    # geo_path = "/home/hongbo/Desktop/code/geogram/cmake-build-release/bin/co3netest"
+    geo_path = "/home/hongbo/Desktop/code/SimplexCVT_recon/cmake-build-debug/src/src"
 
     point_cloud, normals = utils.read_xyz_file(mesh_path)
 
@@ -52,16 +49,14 @@ def gaussian_recon(mesh_path, site_num, dim, out_path, verbose=False):
         #     f"epoch: {i}, loss: {loss[0].sum().item()}, {loss[1].sum().item()}")
 
         particles.update_site_points()
-        particles.update_normals()
+        # particles.update_normals()
 
         if dim == 3:
             particles.constrain_sites()
-            # pass
-
         else:
             particles.constrain_sites_hd()
 
-        particles.update_normals()
+        # particles.update_normals()
 
         if verbose and i % 50 == 0:
             result_points = particles.optimize_site_points.detach(
@@ -75,8 +70,10 @@ def gaussian_recon(mesh_path, site_num, dim, out_path, verbose=False):
             # run_rvd(geo_path, xyz_path, output_path)
             run_rvd_hd(geo_path, dim, xyz_path, output_path)
 
-    particles.constrain_sites()
-    # particles.constrain_sites_hd()
+    if dim == 3:
+        particles.constrain_sites()
+    else:
+        particles.constrain_sites_hd()
 
     result_points = particles.optimize_site_points.detach(
     ).cpu().numpy()
@@ -91,8 +88,8 @@ def gaussian_recon(mesh_path, site_num, dim, out_path, verbose=False):
 
 
 if __name__ == "__main__":
-    input_path = "/home/hongbo/Desktop/code/WNNC/results/ec70f9d4.xyz"
+    input_path = "/media/hongbo/45ad552c-e83b-4f01-9864-7d87cfa1377e/hongbo/Thing10K_point/dataset_80k/59941/59941_emb.xyz"
     out_path = "/home/hongbo/Desktop/code/Gaussian_recon_py/results/"
-    site_num = 40000
-    dim = 3
+    site_num = 8000
+    dim = 8
     gaussian_recon(input_path, site_num, dim, out_path, True)

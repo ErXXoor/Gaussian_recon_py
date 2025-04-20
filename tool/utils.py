@@ -3,31 +3,27 @@ import numpy as np
 import torch
 from sklearn.neighbors import NearestNeighbors
 from sklearn.decomposition import PCA
+import fpsample as fps
 
 
 def read_xyz_file(file_path):
     data = np.loadtxt(file_path)
-    points = data[:, :3]
-    normals = data[:, 3:]
+    if data.shape[1] == 6:
+        points = data[:, :3]
+        normals = data[:, 3:6]
+    elif data.shape[1] == 8:
+        points = data
+        normals = []
+
     return points, normals
 
 
-def read_xyz_file_8d(file_path):
-    data = np.loadtxt(file_path)
-    points = data[:, :3]
-    normals = data[:, 3:6]
-    tangents = data[:, 6:8]
-    return points, normals, tangents
-
-
 def farthest_point_sampling(point_tensor, num_samples):
-    pc = o3d.geometry.PointCloud()
     points = point_tensor.squeeze(0).cpu().numpy()
-    pc.points = o3d.utility.Vector3dVector(points)
-    samlpes = pc.farthest_point_down_sample(num_samples)
+    sample_ids = fps.bucket_fps_kdtree_sampling(points, num_samples)
 
-    result_points = np.asarray(samlpes.points, dtype=np.float32)
-    return torch.from_numpy(result_points).unsqueeze(0)
+    result_points = torch.from_numpy(points[sample_ids]).unsqueeze(0)
+    return result_points, sample_ids
 
 
 def estimate_normals(point_tensor, k=10):

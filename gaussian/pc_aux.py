@@ -1,43 +1,49 @@
 import torch
 from tool import utils
-from pytorch3d.ops import knn_points
+from pytorch3d.ops import knn_points, knn_gather
+import math
 
 
 class PC_aux:
-    def __init__(self, bg_pc):
+    def __init__(self, bg_pc, normals, dim):
         self.background_pc = torch.tensor(
             bg_pc, dtype=torch.float32).unsqueeze(0).cuda()
-        self.normals = []
-        self.radii = []
-        self.init_pc_aux()
-
-    def __init__(self, bg_pc, normals):
-        self.background_pc = torch.tensor(
-            bg_pc, dtype=torch.float32).unsqueeze(0).cuda()
-        self.normals = []
-        self.radii = []
-        self.init_pc_aux(normals)
-
-        self.background_pc_hd = torch.cat(
-            [self.background_pc, self.normals], dim=-1)
-
-    def init_pc_aux(self):
-        self.normals = utils.estimate_normals(
-            self.background_pc, 0.1).cuda()
-
-        pc_tensor = self.background_pc
-
-        knn_result = knn_points(pc_tensor, pc_tensor, K=6)
-        selected_dists = knn_result.dists[..., 5]
-        self.radii = 0.75 * selected_dists
-        self.radii = self.radii.unsqueeze(-1)
-
-    def init_pc_aux(self, normals):
         self.normals = torch.tensor(
             normals, dtype=torch.float32).unsqueeze(0).cuda()
+        self.radii = []
 
-        pc_tensor = self.background_pc
+        if dim == 3:
+            self.optimize_base_pc = self.background_pc
+        elif dim == 6:
+            self.optimize_base_pc = torch.cat(
+                [self.background_pc, 0.1*self.normals], dim=-1)
 
-        knn_result = knn_points(pc_tensor, pc_tensor, K=7)
+            self.hd_eig0, self.hd_eig1 = utils.estimate_tangent_vectors(
+                self.optimize_base_pc)
+            self.hd_eig0 = self.hd_eig0.cuda()
+            self.hd_eig1 = self.hd_eig1.cuda()
+
+        elif dim == 8:
+            self.optimize_base_pc = torch.tensor(
+                bg_pc, dtype=torch.float32).unsqueeze(0).cuda()
+
+            self.hd_eig0, self.hd_eig1 = utils.estimate_tangent_vectors(
+                self.optimize_base_pc)
+            self.hd_eig0 = self.hd_eig0.cuda()
+            self.hd_eig1 = self.hd_eig1.cuda()
+
+        self.init_radii()
+
+    def init_radii(self):
+        pc_tensor = self.optimize_base_pc[..., :3]
+        knn_result = knn_points(pc_tensor, pc_tensor, K=12)
         selected_dists = knn_result.dists.mean(dim=-1)
-        self.radii = (2 * selected_dists).unsqueeze(-1)
+
+        selected_dists = selected_dists
+
+        self.radii = 1.3*math.pi*(selected_dists**2)
+
+        self.radii = self.radii.unsqueeze(-1)
+
+    def get_total_area(self):
+        return self.radii.sum()

@@ -4,69 +4,92 @@ import torch
 from gaussian.particle import Particle
 from gaussian.pc_aux import PC_aux
 from gaussian.loss import Loss_Func
-from rvd.RVD_cpp import run_rvd
+from rvd.RVD_cpp import run_rvd, run_rvd_hd
+from rvd.RVD import rvd_rec
 from gradop.pcgrad import PCGrad
-if __name__ == "__main__":
-    xyz_path = "/home/hongbo/Desktop/code/Gaussian_recon_py/data/01_82-block.xyz"
-    site_num = 10000
-    epoch = 400
-    torch.cuda.set_device(2)
+import os
+
+
+def gaussian_recon(mesh_path, site_num, dim, out_path, verbose=False):
+    epoch = 200
+    torch.cuda.set_device(0)
     torch.manual_seed(42)
 
-    geo_path = "/home/hongbo/Desktop/code/Gaussian_recon/cmake-build-debug/bin/surface_reconstruction"
+    geo_path = "/home/hongbo/Desktop/code/SimplexCVT_recon/cmake-build-debug/src/src"
 
-    point_cloud, normals = utils.read_xyz_file(xyz_path)
+    point_cloud, normals = utils.read_xyz_file(mesh_path)
 
-    pc_aux = PC_aux(point_cloud, normals)
+    pc_aux = PC_aux(point_cloud, normals, dim)
 
-    particles = Particle(pc_aux, site_num)
+    particles = Particle(pc_aux, site_num, dim)
 
-    # optimizer = torch.optim.AdamW([particles.site_points], lr=1e-3)
-    # pcgrad = PCGrad(optimizer)
-
-    optimizer = torch.optim.Adam([particles.optimize_site_points], lr=1e-3)
+    optimizer = torch.optim.AdamW([particles.optimize_site_points], lr=1e-3)
 
     scheduler = torch.optim.lr_scheduler.StepLR(
         optimizer, step_size=100, gamma=0.6)
 
     loss_func = Loss_Func()
     for i in range(epoch):
-        loss = loss_func.cal_loss(particles)
+
+        # particles.update_sigma()
+
+        loss = loss_func.cal_loss(particles, epoch=i)
 
         optimizer.zero_grad()
         loss_un = torch.stack(loss).sum()
         # loss_un = loss[0].sum()
         loss_un.backward()
 
-        # pcgrad.pc_backward(loss)
-        # pcgrad.step()
-
         optimizer.step()
         scheduler.step()
 
-        # print(f"epoch: {i}, loss: {loss_un.item()}")
+        print(f"epoch: {i}, loss: {loss_un.item()}")
 
-        print(
-            f"epoch: {i}, loss: {loss[0].sum().item()}, {loss[1].sum().item()}")
+        # print(
+        #     f"epoch: {i}, loss: {loss[0].sum().item()}, {loss[1].sum().item()}")
 
-        # particles.constrain_sites()
+        particles.update_site_points()
         # particles.update_normals()
 
-        if i % 50 == 0:
-            result_points = particles.site_points.detach().cpu().numpy()
+        if dim == 3:
+            particles.constrain_sites()
+        else:
+            particles.constrain_sites_hd()
 
-            xyz_path = f"/home/hongbo/Desktop/code/Gaussian_recon_py/results/epoch_{i}.xyz"
+        # particles.update_normals()
+
+        if verbose and i % 50 == 0:
+            result_points = particles.optimize_site_points.detach(
+            ).cpu().numpy()
+
+            xyz_path = f"{out_path}/epoch_{i}.xyz"
             np.savetxt(xyz_path,
                        result_points.squeeze(0), fmt="%.6f")
 
-            output_path = f"/home/hongbo/Desktop/code/Gaussian_recon_py/results/epoch_{i}.obj"
-            run_rvd(geo_path, xyz_path, output_path)
+            output_path = f"{out_path}/epoch_{i}.obj"
+            # run_rvd(geo_path, xyz_path, output_path)
+            run_rvd_hd(geo_path, dim, xyz_path, output_path)
 
-    result_points = particles.site_points.detach().cpu().numpy()
+    if dim == 3:
+        particles.constrain_sites()
+    else:
+        particles.constrain_sites_hd()
+
+    result_points = particles.optimize_site_points.detach(
+    ).cpu().numpy()
 
     xyz_path = "/home/hongbo/Desktop/code/Gaussian_recon_py/results/result.xyz"
     np.savetxt(xyz_path,
                result_points.squeeze(0), fmt="%.6f")
 
     output_path = "/home/hongbo/Desktop/code/Gaussian_recon_py/results/result.obj"
-    run_rvd(geo_path, xyz_path, output_path)
+    # run_rvd(geo_path, xyz_path, output_path)
+    run_rvd_hd(geo_path, dim, xyz_path, output_path)
+
+
+if __name__ == "__main__":
+    input_path = "/home/hongbo/Desktop/code/PTV3_Embedding/outputs/ptv3_00/eval/59941_norm_emb.xyz"
+    out_path = "/home/hongbo/Desktop/code/Gaussian_recon_py/results/"
+    site_num = 8000
+    dim = 8
+    gaussian_recon(input_path, site_num, dim, out_path, True)

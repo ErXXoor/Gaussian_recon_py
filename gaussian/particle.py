@@ -42,7 +42,6 @@ class Particle:
 
             self.sigma = alpha * \
                 torch.sqrt(self.area/len(self.optimize_site_points))
-            aaa = 0
 
     def update_sigma(self, K=7):
         with torch.no_grad():

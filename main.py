@@ -88,7 +88,7 @@ def gaussian_recon(mesh_path, site_num, dim, out_path, verbose=False):
 
 
 if __name__ == "__main__":
-    input_path = "/media/hongbo/45ad552c-e83b-4f01-9864-7d87cfa1377e/hongbo/Thing10K_point/dataset_80k/59941/59941_emb.xyz"
+    input_path = "/home/hongbo/Desktop/code/PTV3_Embedding/outputs/ptv3_00/eval/59941_norm_emb.xyz"
     out_path = "/home/hongbo/Desktop/code/Gaussian_recon_py/results/"
     site_num = 8000
     dim = 8

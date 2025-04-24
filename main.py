@@ -8,6 +8,7 @@ from rvd.RVD_cpp import run_rvd, run_rvd_hd
 from rvd.RVD import rvd_rec
 from gradop.pcgrad import PCGrad
 import os
+import argparse
 
 
 def gaussian_recon(mesh_path, site_num, dim, out_path, verbose=False):
@@ -88,8 +89,22 @@ def gaussian_recon(mesh_path, site_num, dim, out_path, verbose=False):
 
 
 if __name__ == "__main__":
-    input_path = "/home/hongbo/Desktop/code/PTV3_Embedding/outputs/ptv3_00/eval/59941_norm_emb.xyz"
-    out_path = "/home/hongbo/Desktop/code/Gaussian_recon_py/results/"
-    site_num = 8000
-    dim = 8
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--input', type=str, default="/home/hongbo/Desktop/code/PTV3_Embedding/outputs/ptv3_01/eval/59941_norm_eval_emb.xyz",
+                        help='input point cloud file')
+    parser.add_argument('--site_num', type=int, default=8000,
+                        help='number of site points')
+    parser.add_argument('--dim', type=int, default=8,
+                        help='dimension of the point cloud')
+    parser.add_argument('--out_path', type=str, default='/home/hongbo/Desktop/code/Gaussian_recon_py/results/',
+                        help='output path for the results')
+    parser.add_argument('--verbose', action='store_true',
+                        help='print verbose output')
+
+    args = parser.parse_args()
+
+    input_path = args.input
+    out_path = args.out_path
+    site_num = args.site_num
+    dim = args.dim
     gaussian_recon(input_path, site_num, dim, out_path, True)

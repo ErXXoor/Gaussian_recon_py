@@ -1,9 +1,21 @@
 import numpy as np
 import fpsample
 
+
+def parse_id_list(file_path):
+    id_list = []
+    with open(file_path, 'r') as f:
+        for line in f:
+            obj_id = line.strip()
+            id_list.append(obj_id)
+    return id_list
+
+
 if __name__ == "__main__":
-    # Load the point cloud data
-    data = np.loadtxt(
-        "/media/hongbo/45ad552c-e83b-4f01-9864-7d87cfa1377e/hongbo/Thing10K_point/dataset_80k/37384/37384_emb.xyz")
-    fps_sample_idx = fpsample.fps_sampling(data, 1000)
-    print(fps_sample_idx)
+    id_path = "/home/hongbo/Desktop/code/PTV3_Embedding/obj_lists/test_80.txt"
+    id_list = parse_id_list(id_path)
+
+    root_path = ""
+
+    for obj_id in id_list:
+        xyz_path =

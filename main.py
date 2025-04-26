@@ -11,7 +11,7 @@ import os
 import argparse
 
 
-def gaussian_recon(mesh_path, site_num, dim, out_path, verbose=False):
+def gaussian_recon(mesh_path, site_num, dim, out_xyz, out_tri, verbose=False, verbose_root=None):
     epoch = 200
     torch.cuda.set_device(0)
     torch.manual_seed(42)
@@ -31,8 +31,6 @@ def gaussian_recon(mesh_path, site_num, dim, out_path, verbose=False):
 
     loss_func = Loss_Func()
     for i in range(epoch):
-
-        # particles.update_sigma()
 
         loss = loss_func.cal_loss(particles, epoch=i)
 
@@ -63,11 +61,11 @@ def gaussian_recon(mesh_path, site_num, dim, out_path, verbose=False):
             result_points = particles.optimize_site_points.detach(
             ).cpu().numpy()
 
-            xyz_path = f"{out_path}/epoch_{i}.xyz"
+            xyz_path = f"{verbose_root}/epoch_{i}.xyz"
             np.savetxt(xyz_path,
                        result_points.squeeze(0), fmt="%.6f")
 
-            output_path = f"{out_path}/epoch_{i}.obj"
+            output_path = f"{verbose_root}/epoch_{i}.obj"
             # run_rvd(geo_path, xyz_path, output_path)
             run_rvd_hd(geo_path, dim, xyz_path, output_path)
 
@@ -79,32 +77,38 @@ def gaussian_recon(mesh_path, site_num, dim, out_path, verbose=False):
     result_points = particles.optimize_site_points.detach(
     ).cpu().numpy()
 
-    xyz_path = "/home/hongbo/Desktop/code/Gaussian_recon_py/results/result.xyz"
-    np.savetxt(xyz_path,
+    np.savetxt(out_xyz,
                result_points.squeeze(0), fmt="%.6f")
 
-    output_path = "/home/hongbo/Desktop/code/Gaussian_recon_py/results/result.obj"
-    # run_rvd(geo_path, xyz_path, output_path)
-    run_rvd_hd(geo_path, dim, xyz_path, output_path)
+    run_rvd_hd(geo_path, dim, out_xyz, out_tri)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input', type=str, default="/home/hongbo/Desktop/code/PTV3_Embedding/outputs/ptv3_01/eval/59941_norm_eval_emb.xyz",
+    parser.add_argument('--input', type=str, default="/home/hongbo/Desktop/code/PTV3_Embedding/outputs/ptv3_02/eval/59941_norm_eval_emb.xyz",
                         help='input point cloud file')
     parser.add_argument('--site_num', type=int, default=8000,
                         help='number of site points')
     parser.add_argument('--dim', type=int, default=8,
                         help='dimension of the point cloud')
-    parser.add_argument('--out_path', type=str, default='/home/hongbo/Desktop/code/Gaussian_recon_py/results/',
+    parser.add_argument('--out_xyz', type=str, default='/home/hongbo/Desktop/code/PTV3_Embedding/outputs/ptv3_02/eval/59941_norm_eval_grc.xyz',
                         help='output path for the results')
+    parser.add_argument('--out_tri', type=str,
+                        default='/home/hongbo/Desktop/code/PTV3_Embedding/outputs/ptv3_02/eval/59941_norm_eval_tri.obj',)
+
     parser.add_argument('--verbose', action='store_true',
                         help='print verbose output')
+
+    parser.add_argument(
+        '--verbose_root', default='/home/hongbo/Desktop/code/Gaussian_recon_py/results/')
 
     args = parser.parse_args()
 
     input_path = args.input
-    out_path = args.out_path
+    out_xyz = args.out_xyz
+    out_tri = args.out_tri
     site_num = args.site_num
     dim = args.dim
-    gaussian_recon(input_path, site_num, dim, out_path, True)
+    verbose_root = args.verbose_root
+    gaussian_recon(input_path, site_num, dim, out_xyz,
+                   out_tri, True, verbose_root)

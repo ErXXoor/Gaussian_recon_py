@@ -1,6 +1,10 @@
 import torch
 from sklearn.neighbors import NearestNeighbors
 import numpy as np
+import robust_laplacian as rbl
+from scipy.sparse.linalg import eigsh
+from sklearn.decomposition import PCA
+import fpsample as fps
 
 
 def gather_neighbor(points, k=12):
@@ -96,3 +100,110 @@ def disc_project_hd_norm(site_points,
     # ct_site_points = proj_site_points[:, :, 0, :].unsqueeze(-2)
 
     return ct_site_points.squeeze(-2)
+
+
+def diffuse_nn(site_points, K):
+    eigen_K = K*2
+    diffuse_t = 1.0
+
+    if type(site_points) is torch.Tensor:
+        site_point_cpu = site_points.squeeze(0).detach().cpu().numpy()
+    else:
+        site_point_cpu = site_points
+
+    L, _ = rbl.point_cloud_laplacian(site_point_cpu, n_neighbors=30)
+    eigenvals, eigenvecs = eigsh(
+        L, k=eigen_K+1, which='SM')
+
+    eigenvals = eigenvals[1:]
+    eigenvecs = eigenvecs[:, 1:]
+
+    diffusion_coords = eigenvecs * np.exp(-eigenvals * diffuse_t)
+    nbrs = NearestNeighbors(
+        n_neighbors=K).fit(diffusion_coords)
+    dists, indices = nbrs.kneighbors(diffusion_coords)
+
+    if type(site_points) is torch.Tensor:
+        indices_tensor = torch.from_numpy(
+            indices).long().unsqueeze(0).to(site_points.device)
+    # right now for numpy, do not unsqueeze(0)
+    else:
+        indices_tensor = indices.astype(np.int32)
+
+    return indices_tensor
+
+
+def farthest_point_sampling(point_tensor, num_samples):
+    points = point_tensor.squeeze(0).cpu().numpy()
+    sample_ids = fps.bucket_fps_kdtree_sampling(points, num_samples)
+
+    result_points = torch.from_numpy(points[sample_ids]).unsqueeze(0)
+    return result_points, sample_ids
+
+
+def estimate_normals(point_tensor, k=10):
+    points = point_tensor.squeeze(0).detach().cpu().numpy()
+    dim = points.shape[1]
+
+    normals = np.zeros_like(points)
+
+    neigh = NearestNeighbors(n_neighbors=k+1, algorithm='auto').fit(points)
+    dists, indices = neigh.kneighbors(points)
+
+    for i in range(len(points)):
+        neighbor_points = points[indices[i, 1:]]
+        pca = PCA(n_components=dim)
+        pca.fit(neighbor_points)
+
+        normals[i] = pca.components_[-1]
+
+    return torch.from_numpy(normals).unsqueeze(0)
+
+
+def estimate_tangent_vectors(point_tensor, k=9):
+    print("Estimating tangent vectors...")
+    ##############
+    points = point_tensor.squeeze(0).detach().cpu().numpy()
+    dim = points.shape[1]
+
+    eig_0 = np.zeros_like(points)
+    eig_1 = np.zeros_like(points)
+
+    neigh = NearestNeighbors(
+        n_neighbors=k, algorithm='auto').fit(points[..., :3])
+    dists, indices = neigh.kneighbors(points[..., :3])
+
+    for i in range(len(points)):
+        neighbor_points = points[indices[i]]
+
+        pca = PCA(n_components=dim)
+        pca.fit(neighbor_points)
+
+        eig_0[i], eig_1[i] = pca.components_[0], pca.components_[1]
+
+    print("Tangent vectors estimated.")
+    return torch.from_numpy(eig_0).unsqueeze(0), torch.from_numpy(eig_1).unsqueeze(0)
+
+
+def estimate_tangent_vectors_diffuse(point_tensor, k=9):
+    print("Estimating tangent vectors...")
+    ##############
+    points = point_tensor.squeeze(0).detach().cpu().numpy()
+    dim = points.shape[1]
+
+    eig_0 = np.zeros_like(points)
+    eig_1 = np.zeros_like(points)
+
+    indices = diffuse_nn(
+        points[..., :3], k)
+
+    for i in range(len(points)):
+        neighbor_points = points[indices[i]]
+
+        pca = PCA(n_components=dim)
+        pca.fit(neighbor_points)
+
+        eig_0[i], eig_1[i] = pca.components_[0], pca.components_[1]
+
+    print("Tangent vectors estimated.")
+    return torch.from_numpy(eig_0).unsqueeze(0), torch.from_numpy(eig_1).unsqueeze(0)

@@ -3,7 +3,7 @@ from pytorch3d.ops import knn_points, knn_gather
 from .particle import Particle
 import math
 from .pc_aux import PC_aux
-import torch_scatter
+from .func import diffuse_nn
 EPS = 1e-10
 
 
@@ -110,7 +110,11 @@ class Loss_Func:
         radius = 3*torch.sqrt(torch.tensor(2.0))*particles.sigma
 
         knn_result_site = knn_points(
-            particles.optimize_site_points, particles.optimize_site_points, K=site_K)
+            particles.optimize_site_points[..., :3], particles.optimize_site_points[..., :3], K=site_K)
+
+        # knn_result_site = knn_points(
+        #     particles.optimize_site_points, particles.optimize_site_points, K=site_K)
+
         ngbr_points_site = knn_gather(
             particles.optimize_site_points, knn_result_site.idx[:, :, 1:])
         # ngbr_points_site = ngbr_points_site.detach()
@@ -158,6 +162,33 @@ class Loss_Func:
         #     decay *= 0.8
 
         # loss = [-qem_loss.sum()]
+
+        loss = []
+        if particles.dim == 3:
+            qem_coeff = 1e-1
+            gauss_coeff = 1
+            # loss = [-qem_coeff*qem_loss.sum(), gauss_coeff*gauss_loss.sum()]
+            loss = [gauss_coeff*gauss_loss.sum()]
+
+        else:
+            qem_coeff = 1e3
+            gauss_coeff = 1e2
+            # loss = [-qem_coeff*qem_loss.sum(), gauss_coeff*gauss_loss.sum()]
+            loss = [gauss_loss.sum()]
+
+        return loss
+
+    def cal_loss_diffuse(self, particles: Particle, epoch, site_K=12, bg_K=20):
+
+        knn_result_site = diffuse_nn(
+            particles.optimize_site_points[..., :3], K=site_K)
+        ngbr_points_site = knn_gather(
+            particles.optimize_site_points, knn_result_site[:, :, 1:])
+
+        ngbr_normals_site = []
+        gauss_loss = self.gauss_energy(
+            particles.optimize_site_points, ngbr_normals_site, ngbr_points_site,
+            particles.sigma)
 
         loss = []
         if particles.dim == 3:

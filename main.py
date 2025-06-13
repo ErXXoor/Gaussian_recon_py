@@ -6,7 +6,6 @@ from gaussian.pc_aux import PC_aux
 from gaussian.loss import Loss_Func
 from rvd.RVD_cpp import run_rvd, run_rvd_hd
 from extract_3d import extract_3d_points
-from gradop.pcgrad import PCGrad
 import os
 import argparse
 
@@ -33,6 +32,8 @@ def gaussian_recon(mesh_path, site_num, dim, out_xyz, out_tri, out_3d, post_proc
     for i in range(epoch):
 
         loss = loss_func.cal_loss(particles, epoch=i)
+        # loss = loss_func.cal_loss_diffuse(
+        #     particles, epoch=i)
 
         optimizer.zero_grad()
         loss_un = torch.stack(loss).sum()
@@ -87,20 +88,20 @@ def gaussian_recon(mesh_path, site_num, dim, out_xyz, out_tri, out_3d, post_proc
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input', type=str, default="/media/hongbo/45ad552c-e83b-4f01-9864-7d87cfa1377e/hongbo/Thing10K_point/surface_sample_20k/42155/42155_emb.xyz",
+    parser.add_argument('--input', type=str, default="/media/hongbo/45ad552c-e83b-4f01-9864-7d87cfa1377e/hongbo/Thing10K_point/surface_sample_20k/40986/40986_emb.xyz",
                         help='input point cloud file')
     parser.add_argument('--site_num', type=int, default=8000,
                         help='number of site points')
     parser.add_argument('--dim', type=int, default=8,
                         help='dimension of the point cloud')
-    parser.add_argument('--out_xyz', type=str, default='/home/hongbo/Desktop/code/PTV3_Embedding/outputs/ptv3_new_03/eval/70558_eval_best_grc.xyz',
+    parser.add_argument('--out_xyz', type=str, default='/home/hongbo/Desktop/code/Gaussian_recon_py/temp/40986_eval_best_grc.xyz',
                         help='output path for the results')
     parser.add_argument('--out_tri', type=str,
-                        default='/home/hongbo/Desktop/code/PTV3_Embedding/outputs/ptv3_new_03/eval/70558_eval_best_tri.obj',)
+                        default='/home/hongbo/Desktop/code/Gaussian_recon_py/temp/40986_eval_best_tri.obj',)
     parser.add_argument(
-        '--out_3d', type=str, default='/home/hongbo/Desktop/code/PTV3_Embedding/outputs/ptv3_new_03/eval/70558_eval_best_grc_3d.xyz',)
+        '--out_3d', type=str, default='/home/hongbo/Desktop/code/Gaussian_recon_py/temp/40986_eval_best_grc_3d.xyz',)
 
-    parser.add_argument('--post_process', type=str, default="true",
+    parser.add_argument('--post_process', type=str, default="false",
                         help='whether to post process the results')
 
     parser.add_argument('--verbose', action='store_true',

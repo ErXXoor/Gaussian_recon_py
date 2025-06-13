@@ -18,52 +18,57 @@ def read_xyz_file(file_path):
     return points, normals
 
 
-def farthest_point_sampling(point_tensor, num_samples):
-    points = point_tensor.squeeze(0).cpu().numpy()
-    sample_ids = fps.bucket_fps_kdtree_sampling(points, num_samples)
+# def farthest_point_sampling(point_tensor, num_samples):
+#     points = point_tensor.squeeze(0).cpu().numpy()
+#     sample_ids = fps.bucket_fps_kdtree_sampling(points, num_samples)
 
-    result_points = torch.from_numpy(points[sample_ids]).unsqueeze(0)
-    return result_points, sample_ids
-
-
-def estimate_normals(point_tensor, k=10):
-    points = point_tensor.squeeze(0).detach().cpu().numpy()
-    dim = points.shape[1]
-
-    normals = np.zeros_like(points)
-
-    neigh = NearestNeighbors(n_neighbors=k+1, algorithm='auto').fit(points)
-    dists, indices = neigh.kneighbors(points)
-
-    for i in range(len(points)):
-        neighbor_points = points[indices[i, 1:]]
-        pca = PCA(n_components=dim)
-        pca.fit(neighbor_points)
-
-        normals[i] = pca.components_[-1]
-
-    return torch.from_numpy(normals).unsqueeze(0)
+#     result_points = torch.from_numpy(points[sample_ids]).unsqueeze(0)
+#     return result_points, sample_ids
 
 
-def estimate_tangent_vectors(point_tensor, k=30):
-    print("Estimating tangent vectors...")
-    ##############
-    points = point_tensor.squeeze(0).detach().cpu().numpy()
-    dim = points.shape[1]
+# def estimate_normals(point_tensor, k=10):
+#     points = point_tensor.squeeze(0).detach().cpu().numpy()
+#     dim = points.shape[1]
 
-    eig_0 = np.zeros_like(points)
-    eig_1 = np.zeros_like(points)
+#     normals = np.zeros_like(points)
 
-    neigh = NearestNeighbors(
-        n_neighbors=k+1, algorithm='auto').fit(points[..., :3])
-    dists, indices = neigh.kneighbors(points[..., :3])
+#     neigh = NearestNeighbors(n_neighbors=k+1, algorithm='auto').fit(points)
+#     dists, indices = neigh.kneighbors(points)
 
-    for i in range(len(points)):
-        neighbor_points = points[indices[i, 1:]]
-        pca = PCA(n_components=dim)
-        pca.fit(neighbor_points)
+#     for i in range(len(points)):
+#         neighbor_points = points[indices[i, 1:]]
+#         pca = PCA(n_components=dim)
+#         pca.fit(neighbor_points)
 
-        eig_0[i], eig_1[i] = pca.components_[0], pca.components_[1]
+#         normals[i] = pca.components_[-1]
 
-    print("Tangent vectors estimated.")
-    return torch.from_numpy(eig_0).unsqueeze(0), torch.from_numpy(eig_1).unsqueeze(0)
+#     return torch.from_numpy(normals).unsqueeze(0)
+
+
+# def estimate_tangent_vectors(point_tensor, k=9):
+#     print("Estimating tangent vectors...")
+#     ##############
+#     points = point_tensor.squeeze(0).detach().cpu().numpy()
+#     dim = points.shape[1]
+
+#     eig_0 = np.zeros_like(points)
+#     eig_1 = np.zeros_like(points)
+
+#     neigh = NearestNeighbors(
+#         n_neighbors=k, algorithm='auto').fit(points[..., :3])
+#     dists, indices = neigh.kneighbors(points[..., :3])
+
+
+#     for i in range(len(points)):
+#         neighbor_points = points[indices[i]]
+
+#         # indices = L.getrow(i).nonzero()[1]
+#         # neighbor_points = points[indices, :]
+
+#         pca = PCA(n_components=dim)
+#         pca.fit(neighbor_points)
+
+#         eig_0[i], eig_1[i] = pca.components_[0], pca.components_[1]
+
+#     print("Tangent vectors estimated.")
+#     return torch.from_numpy(eig_0).unsqueeze(0), torch.from_numpy(eig_1).unsqueeze(0)

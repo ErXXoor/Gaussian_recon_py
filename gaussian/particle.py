@@ -1,8 +1,7 @@
 import torch
-from tool import utils
 from pytorch3d.ops import knn_points, knn_gather
 from .pc_aux import PC_aux
-from .func import disc_project, disc_project_hd, disc_project_hd_norm
+from .func import disc_project, disc_project_hd, farthest_point_sampling
 
 
 class Particle:
@@ -17,7 +16,7 @@ class Particle:
         # self.update_sigma()
 
     def init_site_points(self, num_samples):
-        self.site_points, sample_ids = utils.farthest_point_sampling(
+        self.site_points, sample_ids = farthest_point_sampling(
             self.pc_aux.background_pc, num_samples)
 
         self.site_points = self.site_points.cuda()
@@ -54,7 +53,6 @@ class Particle:
 
             self.sigma = 1 * \
                 torch.sqrt(self.area/len(self.optimize_site_points))
-            aaa = 0
 
     def update_normals(self):
         with torch.no_grad():

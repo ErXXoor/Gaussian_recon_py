@@ -1,6 +1,6 @@
 import torch
-from tool import utils
-from pytorch3d.ops import knn_points, knn_gather
+from .func import estimate_tangent_vectors, estimate_tangent_vectors_diffuse
+from pytorch3d.ops import knn_points
 import math
 
 
@@ -18,7 +18,7 @@ class PC_aux:
             self.optimize_base_pc = torch.cat(
                 [self.background_pc, 0.1*self.normals], dim=-1)
 
-            self.hd_eig0, self.hd_eig1 = utils.estimate_tangent_vectors(
+            self.hd_eig0, self.hd_eig1 = estimate_tangent_vectors(
                 self.optimize_base_pc)
             self.hd_eig0 = self.hd_eig0.cuda()
             self.hd_eig1 = self.hd_eig1.cuda()
@@ -27,8 +27,12 @@ class PC_aux:
             self.optimize_base_pc = torch.tensor(
                 bg_pc, dtype=torch.float32).unsqueeze(0).cuda()
 
-            self.hd_eig0, self.hd_eig1 = utils.estimate_tangent_vectors(
+            self.hd_eig0, self.hd_eig1 = estimate_tangent_vectors(
                 self.optimize_base_pc)
+
+            # self.hd_eig0, self.hd_eig1 = estimate_tangent_vectors_diffuse(
+            #     self.optimize_base_pc)
+
             self.hd_eig0 = self.hd_eig0.cuda()
             self.hd_eig1 = self.hd_eig1.cuda()
 

@@ -3,10 +3,11 @@ import numpy as np
 from scipy.sparse.linalg import eigsh
 from sklearn.neighbors import NearestNeighbors
 
-if __name__ == "__main__":
-    pcd_path = "/media/hongbo/45ad552c-e83b-4f01-9864-7d87cfa1377e/hongbo/Thing10K_point/surface_sample_20k/70558/70558_norm.xyz"
 
-    out_filename = "/home/hongbo/Desktop/code/Gaussian_recon_py/temp/70558_ngbr20.obj"
+if __name__ == "__main__":
+    pcd_path = "/media/hongbo/45ad552c-e83b-4f01-9864-7d87cfa1377e/hongbo/Thing10K_point/surface_sample_20k/437348/437348_norm.xyz"
+
+    out_filename = "/home/hongbo/Desktop/code/Gaussian_recon_py/temp/437348_ngbr20.obj"
 
     pcd = np.loadtxt(pcd_path, dtype=np.float32)
     pcd_3d = pcd[:, :3]

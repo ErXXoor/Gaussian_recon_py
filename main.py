@@ -10,12 +10,10 @@ import os
 import argparse
 
 
-def gaussian_recon(mesh_path, site_num, dim, out_xyz, out_tri, out_3d, post_process, verbose=False, verbose_root=None):
+def gaussian_recon(mesh_path, site_num, dim, out_xyz, out_tri, out_3d, geo_path, post_process, verbose=False, verbose_root=None):
     epoch = 200
     torch.cuda.set_device(0)
     torch.manual_seed(42)
-
-    geo_path = "/home/hongbo/Desktop/working/SimplexCVT_recon/cmake-build-debug/src/src"
 
     point_cloud, normals = utils.read_xyz_file(mesh_path)
 
@@ -101,6 +99,9 @@ if __name__ == "__main__":
     parser.add_argument(
         '--out_3d', type=str, default='/home/hongbo/Desktop/code/Gaussian_recon_py/temp/40986_eval_best_grc_3d.xyz',)
 
+    parser.add_argument('--srvd_path', type=str,
+                        default='/home/hongbo/Desktop/code/SimplexCVT_recon/cmake-build-debug/src/src',)
+
     parser.add_argument('--post_process', type=str, default="false",
                         help='whether to post process the results')
 
@@ -119,6 +120,7 @@ if __name__ == "__main__":
     post_process = args.post_process.lower() == 'true'
     site_num = args.site_num
     dim = args.dim
+    geo_path = args.srvd_path
     verbose_root = args.verbose_root
     gaussian_recon(input_path, site_num, dim, out_xyz,
-                   out_tri, out_3d, post_process, True, verbose_root)
+                   out_tri, out_3d, geo_path, post_process, True, verbose_root)

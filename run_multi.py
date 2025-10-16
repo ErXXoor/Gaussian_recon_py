@@ -13,14 +13,15 @@ def parse_id_list(file_path):
 
 
 if __name__ == "__main__":
-    id_path = "/home/hongbo/Desktop/code/PTV3_Embedding/obj_lists/new_80.txt"
+    id_path = "/home/hongbo/Desktop/code/PTV3_Embedding/obj_lists/nasm_train.txt"
     id_list = parse_id_list(id_path)
 
-    root_path = "/media/hongbo/45ad552c-e83b-4f01-9864-7d87cfa1377e/hongbo/Thing10K_point/surface_sample_20k"
+    root_path = "/media/hongbo/45ad552c-e83b-4f01-9864-7d87cfa1377e/hongbo/Thing10K_point/surface_sample_240_var"
 
-    out_root = "/home/hongbo/Desktop/code/Gaussian_recon_py/results/80s_20k_post"
+    out_root = "/home/hongbo/Desktop/code/Gaussian_recon_py/results/240s_var_post"
 
     grc_path = "/home/hongbo/Desktop/code/Gaussian_recon_py/main.py"
+    srvd_path = "/home/hongbo/Desktop/working/SimplexCVT_recon/cmake-build-debug/src/src"
     params = [
         "--input",
         "",
@@ -33,6 +34,8 @@ if __name__ == "__main__":
         "--out_tri",
         "",
         "--out_3d",
+        "",
+        "--srvd_path",
         "",
         "--post_process",
         "true",
@@ -53,6 +56,7 @@ if __name__ == "__main__":
         params[7] = out_xyz
         params[9] = out_tri
         params[11] = out_3d
+        params[13] = srvd_path
         print(params)
 
         try:

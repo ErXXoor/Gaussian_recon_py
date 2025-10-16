@@ -76,7 +76,7 @@ def gaussian_recon(mesh_path, site_num, dim, out_xyz, out_tri, out_3d, geo_path,
     result_points = particles.optimize_site_points.detach(
     ).cpu().numpy().squeeze(0)
 
-    if out_3d is not None:
+    if out_3d:
         extract_3d_points(result_points, out_3d)
 
     np.savetxt(out_xyz, result_points)
@@ -86,23 +86,23 @@ def gaussian_recon(mesh_path, site_num, dim, out_xyz, out_tri, out_3d, geo_path,
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input', type=str, default="/media/hongbo/45ad552c-e83b-4f01-9864-7d87cfa1377e/hongbo/Thing10K_point/surface_sample_20k/40986/40986_emb.xyz",
+    parser.add_argument('--input', type=str, default="/media/hongbo/45ad552c-e83b-4f01-9864-7d87cfa1377e/hongbo/ptv3_embedding/outputs/ptv3_server_03_con/eval_sv03_patch_scenenet/1Living-room_cnh_blender_name_and_mat_norm_best_emb.xyz",
                         help='input point cloud file')
-    parser.add_argument('--site_num', type=int, default=8000,
+    parser.add_argument('--site_num', type=int, default=352239,
                         help='number of site points')
     parser.add_argument('--dim', type=int, default=8,
                         help='dimension of the point cloud')
-    parser.add_argument('--out_xyz', type=str, default='/home/hongbo/Desktop/code/Gaussian_recon_py/temp/40986_eval_best_grc.xyz',
+    parser.add_argument('--out_xyz', type=str, default='/media/hongbo/45ad552c-e83b-4f01-9864-7d87cfa1377e/hongbo/ptv3_embedding/outputs/ptv3_server_03_con/eval_sv03_patch_scenenet/1Living-room_cnh_blender_name_and_mat_norm_best_352239_grc.xyz',
                         help='output path for the results')
     parser.add_argument('--out_tri', type=str,
-                        default='/home/hongbo/Desktop/code/Gaussian_recon_py/temp/40986_eval_best_tri.obj',)
+                        default='/media/hongbo/45ad552c-e83b-4f01-9864-7d87cfa1377e/hongbo/ptv3_embedding/outputs/ptv3_server_03_con/eval_sv03_patch_scenenet/1Living-room_cnh_blender_name_and_mat_norm_best_352239_tri.obj',)
     parser.add_argument(
-        '--out_3d', type=str, default='/home/hongbo/Desktop/code/Gaussian_recon_py/temp/40986_eval_best_grc_3d.xyz',)
+        '--out_3d', type=str, default='/media/hongbo/45ad552c-e83b-4f01-9864-7d87cfa1377e/hongbo/ptv3_embedding/outputs/ptv3_server_03_con/eval_sv03_patch_scenenet/1Living-room_cnh_blender_name_and_mat_norm_best_352239_grc_3d.xyz',)
 
     parser.add_argument('--srvd_path', type=str,
                         default='/home/hongbo/Desktop/code/SimplexCVT_recon/cmake-build-debug/src/src',)
 
-    parser.add_argument('--post_process', type=str, default="false",
+    parser.add_argument('--post_process', type=str, default="true",
                         help='whether to post process the results')
 
     parser.add_argument('--verbose', action='store_true',
